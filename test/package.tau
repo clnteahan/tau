@@ -1,0 +1,6 @@
+NAME="Tau"
+VERSION=0.1.0
+DESCRIPTION="OS agnostic package manager"
+TYPE=SOURCE
+# Comma separated dependencies, starting with '$' means optional, any objects between "[]" will be acceptable dependencies
+DEPS= glibc, gcc, xz
