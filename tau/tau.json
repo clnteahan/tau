@@ -1,0 +1,1 @@
+{"name":"tau","version":"0.0.0","install":{"x64":"go install"},"deps":[],"tags":["src"],"files":[["files/zEhVoxtmPpB3-Lum3sqYZgfpnWjlo-QlfXcKCJGTP6A=/packing.go","/usr/share/tau/packing.go"],["files/zEhVoxtmPpB3-Lum3sqYZgfpnWjlo-QlfXcKCJGTP6A=/parser.go","/usr/share/tau/parser.go"],["files/zEhVoxtmPpB3-Lum3sqYZgfpnWjlo-QlfXcKCJGTP6A=/main.go","/usr/share/tau/main.go"]]}

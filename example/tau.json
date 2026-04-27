@@ -1,0 +1,14 @@
+{
+  "name": "tau",
+  "version": "0.0.0",
+  "install": {
+    "x64": "go install"
+  },
+  "tags": ["src"],
+  "deps": [],
+  "files": [
+    ["../lib/packing.go", "/usr/share/tau/packing.go"],
+    ["../lib/parser.go", "/usr/share/tau/parser.go"],
+    ["../main.go","/usr/share/tau/main.go"]
+  ]
+}
