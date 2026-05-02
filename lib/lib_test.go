@@ -6,14 +6,21 @@ import (
 	"testing"
 )
 
-func parseTau() *PackageDetails {
-	pkgData := NewPackageDetails()
-	err := pkgData.FromFile("example/tau.json")
+func absWd(relPath string) string {
+	wd, err := os.Getwd()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		panic(err)
 	}
-	return pkgData
+	return wd + relPath
+}
+
+func parseTau() (*PackageDetails, error) {
+	pkgData := NewPackageDetails()
+	if err := pkgData.FromFile(absWd("/../example/tau.json")); err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	return pkgData, nil
 }
 
 func TestParse(t *testing.T) {
@@ -21,16 +28,19 @@ func TestParse(t *testing.T) {
 }
 
 func TestPack(t *testing.T) {
-	pkgData := parseTau()
+	pkgData, err := parseTau()
+	if err != nil {
+		t.Fatal(err)
+	}
 	packList := NewPackList()
-	packList.Add("lib/packing.go", "/usr/share/tau/packing.go")
-	packList.Add("lib/parser.go", "/usr/share/tau/parser.go")
-	packList.Add("main.go", "/usr/share/tau/main.go")
+	packList.Add(absWd("/packing.go"), "/usr/share/tau/packing.go")
+	packList.Add(absWd("/parser.go"), "/usr/share/tau/parser.go")
+	packList.Add(absWd("/../main.go"), "/usr/share/tau/main.go")
 	if err := packList.Pack(pkgData); err != nil {
 		t.Error(err)
 	}
 
-	if err := Unpack("tau.tau"); err != nil {
+	if err := Unpack(absWd("/tau.tau")); err != nil {
 		t.Error(err)
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -72,6 +73,11 @@ func (pl *PackList) Pack(pd *PackageDetails) error {
 	}(tw)
 	for i, pack := range *pl {
 
+		f, err := os.Stat(pack.localPath)
+		if err != nil {
+			return err
+		}
+
 		body, err := os.ReadFile(pack.localPath)
 
 		if err != nil {
@@ -82,7 +88,7 @@ func (pl *PackList) Pack(pd *PackageDetails) error {
 		cName := pSplit[len(pSplit)-1:][0]
 		localDir := strings.Join(pSplit[:len(pSplit)-1], string(os.PathSeparator))
 		hash := sha256.Sum256([]byte(localDir))
-		cPath := fmt.Sprintf("files/%s/%s", base64.URLEncoding.EncodeToString(hash[:]), cName)
+		cPath := fmt.Sprintf("files/%s/%s", base64.RawURLEncoding.EncodeToString(hash[:]), cName)
 		fmt.Printf("Packing %s to %s\n", pack.localPath, cPath)
 
 		pd.Files[i][0] = cPath
@@ -90,6 +96,7 @@ func (pl *PackList) Pack(pd *PackageDetails) error {
 		hdr := &tar.Header{
 			Name: cPath,
 			Size: int64(len(body)),
+			Mode: int64(f.Mode()),
 		}
 		if err := tw.WriteHeader(hdr); err != nil {
 			return err
@@ -131,6 +138,28 @@ func (pl *PackList) Pack(pd *PackageDetails) error {
 	return os.WriteFile(fmt.Sprintf("%s.tau", pd.Name), buf.Bytes(), 0644)
 }
 
+func unpackTarFile(buff []byte, hdr *tar.Header, destDir *string) error {
+	fmt.Printf("Unpacking %s/%s\n", *destDir, hdr.Name)
+
+	target := filepath.Join(*destDir, hdr.Name)
+
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, os.FileMode(hdr.Mode))
+	if err != nil {
+		return err
+	}
+	n, err := f.Write(buff)
+	if err != nil {
+		return err
+	}
+	if n != len(buff) {
+		return io.ErrShortWrite
+	}
+	return f.Close()
+}
+
 func Unpack(path string) error {
 	destDir := strings.ReplaceAll(path, ".tau", "")
 
@@ -144,32 +173,37 @@ func Unpack(path string) error {
 		return err
 	}
 
+	var wg sync.WaitGroup
 	tr := tar.NewReader(zr)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
+	for hNext := true; hNext; {
+		hdr, gErr := tr.Next()
+		if gErr == io.EOF {
+			hNext = false
 			break
 		}
-		if err != nil {
-			return err
+		if gErr != nil {
+			err = gErr
+			break
 		}
-
-		target := filepath.Join(destDir, hdr.Name)
-
-		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-			return err
+		buff, gErr := io.ReadAll(tr)
+		if gErr != nil {
+			err = gErr
+			break
 		}
-		f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, os.FileMode(hdr.Mode))
-		if err != nil {
-			return err
-		}
-		if _, err := io.Copy(f, tr); err != nil {
-			_ = f.Close()
-			return err
-		}
-		if f.Close() != nil {
-			return err
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			gErr := unpackTarFile(buff, hdr, &destDir)
+			if gErr == io.EOF {
+				hNext = false
+				return
+			}
+			if gErr != nil {
+				err = gErr
+				return
+			}
+		}()
 	}
-	return nil
+	wg.Wait()
+	return err
 }
