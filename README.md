@@ -12,3 +12,12 @@
 - Secure file transfer
 - Automatic signature checking
 - Hooks for other automation
+
+## Build
+```SH
+go build -o -buildmode=shared build
+```
+or install with
+```SH
+go build -buildmode=exe -o /usr/bin
+```

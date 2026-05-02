@@ -103,6 +103,7 @@ func NewTauConfig() *TauConfig {
 func ParseClArgs(conf *TauConfig) CommandArg {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: tau <install|uninstall|pack|unpack|version> [options]")
+		os.Exit(1)
 	}
 	cmd := commandMap[os.Args[1]]
 	for i := 2; i < len(os.Args); i++ {
