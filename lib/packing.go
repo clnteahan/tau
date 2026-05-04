@@ -61,7 +61,7 @@ func (pl *PackList) ContainsInstall(installPath string) bool {
 	return false
 }
 
-func (pl *PackList) Pack(pd *PackageDetails) error {
+func (pl *PackList) Pack(pd *PackageDetails, conf *TauConfig) error {
 	var buf bytes.Buffer
 	zl := zlib.NewWriter(&buf)
 	tw := tar.NewWriter(zl)
@@ -73,23 +73,23 @@ func (pl *PackList) Pack(pd *PackageDetails) error {
 	}(tw)
 	for i, pack := range *pl {
 
-		f, err := os.Stat(pack.localPath)
+		abs := filepath.Join(conf.BaseDir, pack.localPath)
+
+		f, err := os.Stat(abs)
 		if err != nil {
 			return err
 		}
 
-		body, err := os.ReadFile(pack.localPath)
+		body, err := os.ReadFile(abs)
 
 		if err != nil {
 			return err
 		}
-
-		pSplit := strings.Split(pack.installPath, string(os.PathSeparator))
-		cName := pSplit[len(pSplit)-1:][0]
-		localDir := strings.Join(pSplit[:len(pSplit)-1], string(os.PathSeparator))
-		hash := sha256.Sum256([]byte(localDir))
-		cPath := fmt.Sprintf("files/%s/%s", base64.RawURLEncoding.EncodeToString(hash[:]), cName)
-		fmt.Printf("Packing %s to %s\n", pack.localPath, cPath)
+		
+		lDir, lName := filepath.Split(pack.localPath) // pSplit[len(pSplit)-1:][0]
+		hash := sha256.Sum256([]byte(lDir))
+		cPath := fmt.Sprintf("files/%s/%s", base64.RawURLEncoding.EncodeToString(hash[:]), lName)
+		fmt.Printf("Packing %s to %s\n", abs, cPath)
 
 		pd.Files[i][0] = cPath
 

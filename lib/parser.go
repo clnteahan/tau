@@ -24,7 +24,7 @@ type PackageDetails struct {
 }
 
 // Gets the installation setting of the current architecture
-func (pd PackageDetails) getInstall() (string, error) {
+func (pd *PackageDetails) getInstall() (string, error) {
 	if runtime.GOARCH == "amd64" {
 		return pd.Install.X64, nil
 	}
@@ -34,7 +34,7 @@ func (pd PackageDetails) getInstall() (string, error) {
 	return "", errors.New("unsupported architecture")
 }
 
-func (pd PackageDetails) String() string {
+func (pd *PackageDetails) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("Name:\t")
 	buffer.WriteString(pd.Name)
@@ -74,4 +74,20 @@ func (pd *PackageDetails) FromFile(path string) error {
 
 func NewPackageDetails() *PackageDetails {
 	return &PackageDetails{}
+}
+
+func (pd *PackageDetails) LocalFiles() []string {
+	newList := make([]string, len(pd.Files))
+	for i, file := range pd.Files {
+		newList[i] = file[0]
+	}
+	return newList
+}
+
+func (pd *PackageDetails) InstallFiles() []string {
+	newList := make([]string, len(pd.Files))
+	for i, file := range pd.Files {
+		newList[i] = file[1]
+	}
+	return newList
 }

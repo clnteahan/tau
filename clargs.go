@@ -4,108 +4,87 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
+	"tau/lib"
 )
 
-type UnknownFlagError error
-
-type CommandArg int
-
-const (
-	CommandUnknown CommandArg = iota
-	CommandInstall
-	CommandUninstall
-	CommandPack
-	CommandUnpack
-	CommandVersion
-	CommandInfo
-	CommandHelp
-)
-
-var commandMap = map[string]CommandArg{
-	"install":   CommandInstall,
-	"i":         CommandInstall,
-	"uninstall": CommandUninstall,
-	"pack":      CommandPack,
-	"unpack":    CommandUnpack,
-	"version":   CommandVersion,
-	"info":      CommandInfo,
-	"help":      CommandHelp,
+var commandMap = map[string]lib.CommandArg{
+	"install":   lib.CommandInstall,
+	"i":         lib.CommandInstall,
+	"uninstall": lib.CommandUninstall,
+	"pack":      lib.CommandPack,
+	"unpack":    lib.CommandUnpack,
+	"version":   lib.CommandVersion,
+	"info":      lib.CommandInfo,
+	"help":      lib.CommandHelp,
 }
 
-type Flag int
-
-const (
-	FlagUnknown Flag = iota
-	FlagAll
-	FlagVerbose
-	FlagHelp
-)
-
-var flagMap = map[string]Flag{
-	"-a":        FlagAll,
-	"--all":     FlagAll,
-	"-h":        FlagHelp,
-	"--help":    FlagHelp,
-	"-v":        FlagVerbose,
-	"--verbose": FlagVerbose,
+type ClArgError struct {
+	arg     string
+	message string
 }
 
-type TauConfig struct {
-	InstallDir string
-	targetAll  bool
-	help       bool
-	Verbose    bool
+func (e *ClArgError) Error() string {
+	return fmt.Sprintf("%s - %s", e.arg, e.message)
 }
 
-func (conf *TauConfig) AddFlag(flag Flag) error {
-	if flag == FlagUnknown {
-		return UnknownFlagError(nil)
+func packArgs(conf *lib.TauConfig, args []string) error {
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			if err := conf.AddFlagString(arg); err != nil {
+				log.Fatalf("Error parsing argument '%s': %s", arg, err)
+			}
+			continue
+		}
+		abs, err := filepath.Abs(arg)
+		if err != nil {
+			log.Fatalf("Error parsing argument '%s': %s", arg, err)
+		}
+		_, err = os.Stat(abs)
+		if err != nil {
+			return &ClArgError{abs, fmt.Sprintf("Unknown command line argument, %s", err)}
+		}
+		conf.Files = append(conf.Files, arg)
+		conf.BaseDir = filepath.Dir(abs)
 	}
-	if flag == FlagAll {
-		conf.targetAll = true
-	}
-	if flag == FlagHelp {
-		conf.help = true
-	}
-	if flag == FlagVerbose {
-		conf.Verbose = true
-	}
-
 	return nil
 }
 
-func (conf *TauConfig) AddFlagString(flags string) error {
-	if !strings.HasPrefix(flags, "-") {
-		return UnknownFlagError(nil)
-	}
-	if strings.HasPrefix(flags, "--") {
-		return conf.AddFlag(flagMap[flags])
-	}
-	if len(flags) == 2 {
-		return conf.AddFlagString(flags)
-	}
-	for i := 1; i < len(flags); i++ {
-		if err := conf.AddFlag(flagMap[fmt.Sprintf("-%s", flags[i])]); err != nil {
-			return err
+func unpackArgs(conf *lib.TauConfig, args []string) error {
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			if err := conf.AddFlagString(arg); err != nil {
+				log.Fatalf("Error parsing argument '%s': %s", arg, err)
+			}
+			continue
+		}
+		_, err := os.Stat(arg)
+		if err == nil {
+			conf.Files = append(conf.Files, arg)
 		}
 	}
-
-	return UnknownFlagError(nil)
+	return nil
 }
 
-func NewTauConfig() *TauConfig {
-	return &TauConfig{
-		InstallDir: "/usr/share/tau",
-	}
-}
-
-func ParseClArgs(conf *TauConfig) CommandArg {
+func ParseClArgs(conf *lib.TauConfig) {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: tau <install|uninstall|pack|unpack|version> [options]")
 		os.Exit(1)
 	}
-	cmd := commandMap[os.Args[1]]
+	conf.Cmd = commandMap[os.Args[1]]
+	if conf.Cmd == lib.CommandPack {
+		if err := packArgs(conf, os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if conf.Cmd == lib.CommandUnpack {
+		if err := unpackArgs(conf, os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	for i := 2; i < len(os.Args); i++ {
 		arg := os.Args[i]
 		if strings.HasPrefix(arg, "-") {
@@ -114,5 +93,4 @@ func ParseClArgs(conf *TauConfig) CommandArg {
 			}
 		}
 	}
-	return cmd
 }
