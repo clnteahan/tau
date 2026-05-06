@@ -1,9 +1,11 @@
 package main
 
 import (
+	"C"
 	"fmt"
 	"os"
 	"tau/lib"
+	"unsafe"
 )
 
 func main() {
@@ -53,4 +55,16 @@ func pack(conf *lib.TauConfig) error {
 
 func unpack(conf *lib.TauConfig) error {
 	return lib.Unpack(conf.Files[0])
+}
+
+//export lib.NewPackList
+
+//export CNewPackList
+func CNewPackList() unsafe.Pointer {
+	return unsafe.Pointer(lib.NewPackList())
+}
+
+//export CUnpack
+func CUnpack(path *C.char) {
+	lib.Unpack(C.GoString(path))
 }

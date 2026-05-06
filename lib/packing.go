@@ -85,7 +85,7 @@ func (pl *PackList) Pack(pd *PackageDetails, conf *TauConfig) error {
 		if err != nil {
 			return err
 		}
-		
+
 		lDir, lName := filepath.Split(pack.localPath) // pSplit[len(pSplit)-1:][0]
 		hash := sha256.Sum256([]byte(lDir))
 		cPath := fmt.Sprintf("files/%s/%s", base64.RawURLEncoding.EncodeToString(hash[:]), lName)

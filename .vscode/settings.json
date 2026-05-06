@@ -1,0 +1,6 @@
+{
+    "go.toolsEnvVars": {
+        "GOPATH": "$HOME/go",
+        "GOAMD64": "v4"
+    }
+}
