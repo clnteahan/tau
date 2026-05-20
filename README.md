@@ -15,7 +15,7 @@
 
 ## Build
 ```SH
-go build -o -buildmode=shared build
+go build -o build/ .
 ```
 or install with
 ```SH

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"tau/lib/zstd"
 	"time"
 )
 
@@ -147,6 +148,12 @@ func unpackTarFile(buff []byte, hdr *tar.Header, destDir *string) error {
 		return err
 	}
 	f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, os.FileMode(hdr.Mode))
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Printf("Error closing file %s: %s\n", target, err)
+		}
+	}(f)
 	if err != nil {
 		return err
 	}
@@ -157,7 +164,7 @@ func unpackTarFile(buff []byte, hdr *tar.Header, destDir *string) error {
 	if n != len(buff) {
 		return io.ErrShortWrite
 	}
-	return f.Close()
+	return nil
 }
 
 func Unpack(path string) error {
@@ -168,15 +175,19 @@ func Unpack(path string) error {
 		return err
 	}
 
-	zr, err := zlib.NewReader(cFile)
+	/*zr, err := zlib.NewReader(cFile)
 	if err != nil {
 		return err
-	}
+	}*/
 
+	zstdr := zstd.NewReader(cFile)
+
+	// New goroutine for each file in tarball, wait for all to finish
 	var wg sync.WaitGroup
-	tr := tar.NewReader(zr)
+	tr := tar.NewReader(zstdr)
 	for hNext := true; hNext; {
 		hdr, gErr := tr.Next()
+		// Stop if any routine encountered an error
 		if gErr == io.EOF {
 			hNext = false
 			break
@@ -190,19 +201,17 @@ func Unpack(path string) error {
 			err = gErr
 			break
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			gErr := unpackTarFile(buff, hdr, &destDir)
-			if gErr == io.EOF {
+		wg.Go(func() {
+			rErr := unpackTarFile(buff, hdr, &destDir)
+			if rErr == io.EOF {
 				hNext = false
 				return
 			}
-			if gErr != nil {
-				err = gErr
+			if rErr != nil {
+				err = rErr
 				return
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	return err
