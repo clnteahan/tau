@@ -18,6 +18,7 @@ const (
 	CommandVersion
 	CommandInfo
 	CommandHelp
+	CommandAdd
 )
 
 type Flag int
@@ -76,7 +77,7 @@ func (conf *TauConfig) AddFlagString(flags string) error {
 		return conf.AddFlagString(flags)
 	}
 	for i := 1; i < len(flags); i++ {
-		if err := conf.AddFlag(flagMap[fmt.Sprintf("-%s", flags[i])]); err != nil {
+		if err := conf.AddFlag(flagMap[fmt.Sprintf("-%c", flags[i])]); err != nil {
 			return err
 		}
 	}
@@ -88,4 +89,13 @@ func NewTauConfig() *TauConfig {
 	return &TauConfig{
 		InstallDir: "/usr/share/tau",
 	}
+}
+
+func AddFiles(pdDir string, files ...[]string) error {
+	pd := NewPackageDetails()
+	if err := pd.FromFile(pdDir); err != nil {
+		return err
+	}
+	pd.Files = append(pd.Files, files...)
+	return pd.ToFile(pdDir)
 }

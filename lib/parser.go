@@ -72,6 +72,10 @@ func (pd *PackageDetails) FromFile(path string) error {
 	return nil
 }
 
+func (pd *PackageDetails) ToFile(path string) error {
+	return os.WriteFile(path, []byte(pd.String()), 0600)
+}
+
 func NewPackageDetails() *PackageDetails {
 	return &PackageDetails{}
 }

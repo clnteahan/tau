@@ -3,7 +3,6 @@ package lib
 import (
 	"archive/tar"
 	"bytes"
-	"compress/zlib"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -64,7 +63,7 @@ func (pl *PackList) ContainsInstall(installPath string) bool {
 
 func (pl *PackList) Pack(pd *PackageDetails, conf *TauConfig) error {
 	var buf bytes.Buffer
-	zl := zlib.NewWriter(&buf)
+	zl := zstd.NewWriter(&buf)
 	tw := tar.NewWriter(zl)
 	defer func(tw *tar.Writer) {
 		err := tw.Close()
@@ -180,7 +179,11 @@ func Unpack(path string) error {
 		return err
 	}*/
 
-	zstdr := zstd.NewReader(cFile)
+	zstdr, err := zstd.NewReader(cFile)
+
+	if err != nil {
+		return err
+	}
 
 	// New goroutine for each file in tarball, wait for all to finish
 	var wg sync.WaitGroup

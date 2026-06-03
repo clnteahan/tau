@@ -29,6 +29,7 @@ func TestParse(t *testing.T) {
 
 func TestPack(t *testing.T) {
 	pkgData, err := parseTau()
+	tc := NewTauConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +37,7 @@ func TestPack(t *testing.T) {
 	packList.Add(absWd("/packing.go"), "/usr/share/tau/packing.go")
 	packList.Add(absWd("/parser.go"), "/usr/share/tau/parser.go")
 	packList.Add(absWd("/../main.go"), "/usr/share/tau/main.go")
-	if err := packList.Pack(pkgData); err != nil {
+	if err := packList.Pack(pkgData, tc); err != nil {
 		t.Error(err)
 	}
 

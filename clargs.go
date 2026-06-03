@@ -18,6 +18,7 @@ var commandMap = map[string]lib.CommandArg{
 	"version":   lib.CommandVersion,
 	"info":      lib.CommandInfo,
 	"help":      lib.CommandHelp,
+	"add":       lib.CommandAdd,
 }
 
 type ClArgError struct {
@@ -67,9 +68,27 @@ func unpackArgs(conf *lib.TauConfig, args []string) error {
 	return nil
 }
 
+func addArgs(conf *lib.TauConfig, args []string) error {
+	var files []string
+	for _, arg := range args[1:] {
+		if strings.HasPrefix(arg, "-") {
+			if err := conf.AddFlagString(arg); err != nil {
+				log.Fatalf("Error parsing argument '%s': %s", arg, err)
+			}
+			continue
+		}
+		_, err := os.Stat(arg)
+		if err != nil {
+			return &ClArgError{arg, fmt.Sprintf("Unable to open file: %s", err)}
+		}
+		files = append(files, arg)
+	}
+	return lib.AddFiles(args[0], files)
+}
+
 func ParseClArgs(conf *lib.TauConfig) {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: tau <install|uninstall|pack|unpack|version> [options]")
+		fmt.Println("Usage: tau <install|uninstall|pack|unpack|version|add> [options]")
 		os.Exit(1)
 	}
 	conf.Cmd = commandMap[os.Args[1]]
@@ -84,6 +103,11 @@ func ParseClArgs(conf *lib.TauConfig) {
 			log.Fatal(err)
 		}
 		return
+	}
+	if conf.Cmd == lib.CommandInstall {
+		if err := addArgs(conf, os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
 	}
 	for i := 2; i < len(os.Args); i++ {
 		arg := os.Args[i]
