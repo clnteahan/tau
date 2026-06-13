@@ -40,13 +40,14 @@ var flagMap = map[string]Flag{
 }
 
 type TauConfig struct {
-	Cmd        CommandArg
-	InstallDir string
-	targetAll  bool
-	help       bool
-	Verbose    bool
-	Files      []string
-	BaseDir    string
+	Cmd          CommandArg
+	InstallDir   string
+	ManifestPath string
+	targetAll    bool
+	help         bool
+	Verbose      bool
+	Files        []string
+	BaseDir      string
 }
 
 func (conf *TauConfig) AddFlag(flag Flag) error {

@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"C"
 	"archive/tar"
 	"bytes"
 	"crypto/sha256"
@@ -65,6 +66,7 @@ func (pl *PackList) Pack(pd *PackageDetails, conf *TauConfig) error {
 	var buf bytes.Buffer
 	zl := zstd.NewWriter(&buf)
 	tw := tar.NewWriter(zl)
+
 	defer func(tw *tar.Writer) {
 		err := tw.Close()
 		if err != nil {
