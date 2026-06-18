@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"strings"
 	"tau/lib"
 	"unsafe"
 )
@@ -26,13 +25,27 @@ func (e *ClArgError) Error() string {
 	return fmt.Sprintf("%s - %s", e.arg, e.message)
 }
 
+func installArgs(conf *lib.TauConfig, args []string) error {
+	if len(args) < 1 {
+		log.Fatalf("Usage: %s install <manifest>", os.Args[0])
+	}
+	fset := flag.NewFlagSet("install", flag.ContinueOnError)
+	if err := fset.Parse(args); err != nil {
+		return err
+	}
+
+	err := install("", conf)
+
+	return err
+}
+
 func packArgs(conf *lib.TauConfig, args []string) error {
 	if len(args) < 1 {
 		log.Fatalf("Usage: %s pack <manifest>", os.Args[0])
 	}
-	conf.Cmd = lib.CommandPack
 	fset := flag.NewFlagSet("pack", flag.ContinueOnError)
 	manifest := fset.String("manifest", "", "Manifest file to pack")
+
 	err := fset.Parse(args)
 	if err != nil {
 		return err
@@ -53,12 +66,23 @@ func unpackArgs(conf *lib.TauConfig, args []string) error {
 	if len(args) < 1 {
 		log.Fatalf("Usage: %s unpack <file>", os.Args[0])
 	}
-	conf.Cmd = lib.CommandUnpack
 
-	_, err := os.Stat(args[0])
+	fset := flag.NewFlagSet("unpack", flag.ContinueOnError)
+	output := fset.String("output", "", "Output directory")
+	fset.StringVar(output, "o", ".", "Output directory")
+
+	err := fset.Parse(args)
 	if err != nil {
 		return err
 	}
+	_, err = os.Stat(args[0])
+	if err != nil {
+		return err
+	}
+	if *output == "." {
+		*output = path.Base(args[0])
+	}
+	conf.OutPath = *output
 	conf.Files = make([]string, 1)
 	conf.Files[0] = args[0]
 
@@ -66,42 +90,30 @@ func unpackArgs(conf *lib.TauConfig, args []string) error {
 	return err
 }
 
-func addArgs(conf *lib.TauConfig, args []string) error {
-	var files []string
-	for _, arg := range args[1:] {
-		if strings.HasPrefix(arg, "-") {
-			if err := conf.AddFlagString(arg); err != nil {
-				log.Fatalf("Error parsing argument '%s': %s", arg, err)
-			}
-			continue
-		}
-		_, err := os.Stat(arg)
-		if err != nil {
-			return &ClArgError{arg, fmt.Sprintf("Unable to open file: %s", err)}
-		}
-		files = append(files, arg)
-	}
-	return lib.AddFiles(args[0], files)
-}
-
 func ParseClArgs(conf *lib.TauConfig) {
 	if len(os.Args) < 2 {
-		log.Fatalf("Usage: %s <install|uninstall|pack|unpack|version>", os.Args[0])
+		log.Fatalf("Usage: %s <install|uninstall|pack|unpack|info|version|help>", os.Args[0])
 	}
 	var err error = nil
 	switch os.Args[1] {
+	case "install":
+	case "uninstall":
 	case "pack":
 		err = packArgs(conf, os.Args[2:])
 	case "unpack":
 		err = unpackArgs(conf, os.Args[2:])
 	default:
-		err = &ClArgError{os.Args[1], fmt.Sprintf("Unknown argument '%s'", os.Args[1])}
+		err = &ClArgError{os.Args[1], fmt.Sprintf("Unknown command '%s'", os.Args[1])}
 	}
 
 	if err != nil {
 		log.Fatalf("Error parsing argument '%s': %s", os.Args[1], err)
 	}
 
+}
+
+func install(pkg string, conf *lib.TauConfig) error {
+	return nil
 }
 
 func pack(conf *lib.TauConfig) error {
@@ -120,7 +132,7 @@ func pack(conf *lib.TauConfig) error {
 }
 
 func unpack(conf *lib.TauConfig) error {
-	return lib.Unpack(conf.Files[0])
+	return lib.Unpack(conf)
 }
 
 //export lib.NewPackList
@@ -131,6 +143,6 @@ func CNewPackList() unsafe.Pointer {
 }
 
 //export CUnpack
-func CUnpack(path *C.char) {
-	lib.Unpack(C.GoString(path))
-}
+//func CUnpack(path *C.char) {
+//	lib.Unpack(C.GoString(path))
+//}

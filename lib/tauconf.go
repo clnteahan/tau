@@ -1,10 +1,5 @@
 package lib
 
-import (
-	"fmt"
-	"strings"
-)
-
 type UnknownFlagError error
 
 type CommandArg int
@@ -30,21 +25,11 @@ const (
 	FlagHelp
 )
 
-var flagMap = map[string]Flag{
-	"-a":        FlagAll,
-	"--all":     FlagAll,
-	"-h":        FlagHelp,
-	"--help":    FlagHelp,
-	"-v":        FlagVerbose,
-	"--verbose": FlagVerbose,
-}
-
 type TauConfig struct {
-	Cmd          CommandArg
 	InstallDir   string
 	ManifestPath string
+	OutPath      string
 	targetAll    bool
-	help         bool
 	Verbose      bool
 	Files        []string
 	BaseDir      string
@@ -57,9 +42,6 @@ func (conf *TauConfig) AddFlag(flag Flag) error {
 	if flag == FlagAll {
 		conf.targetAll = true
 	}
-	if flag == FlagHelp {
-		conf.help = true
-	}
 	if flag == FlagVerbose {
 		conf.Verbose = true
 	}
@@ -67,28 +49,10 @@ func (conf *TauConfig) AddFlag(flag Flag) error {
 	return nil
 }
 
-func (conf *TauConfig) AddFlagString(flags string) error {
-	if !strings.HasPrefix(flags, "-") {
-		return UnknownFlagError(nil)
-	}
-	if strings.HasPrefix(flags, "--") {
-		return conf.AddFlag(flagMap[flags])
-	}
-	if len(flags) == 2 {
-		return conf.AddFlagString(flags)
-	}
-	for i := 1; i < len(flags); i++ {
-		if err := conf.AddFlag(flagMap[fmt.Sprintf("-%c", flags[i])]); err != nil {
-			return err
-		}
-	}
-
-	return UnknownFlagError(nil)
-}
-
 func NewTauConfig() *TauConfig {
 	return &TauConfig{
 		InstallDir: "/usr/share/tau",
+		Verbose:    false,
 	}
 }
 

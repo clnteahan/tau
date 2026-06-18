@@ -91,7 +91,9 @@ func (pl *PackList) Pack(pd *PackageDetails, conf *TauConfig) error {
 		lDir, lName := filepath.Split(pack.localPath) // pSplit[len(pSplit)-1:][0]
 		hash := sha256.Sum256([]byte(lDir))
 		cPath := fmt.Sprintf("files/%s/%s", base64.RawURLEncoding.EncodeToString(hash[:]), lName)
-		fmt.Printf("Packing %s to %s\n", abs, cPath)
+		if conf.Verbose {
+			fmt.Printf("Packing %s to %s\n", abs, cPath)
+		}
 
 		pd.Files[i][0] = cPath
 
@@ -168,10 +170,10 @@ func unpackTarFile(buff []byte, hdr *tar.Header, destDir *string) error {
 	return nil
 }
 
-func Unpack(path string) error {
-	destDir := strings.ReplaceAll(path, ".tau", "")
+func Unpack(conf *TauConfig) error {
+	destDir := strings.ReplaceAll(conf.OutPath, ".tau", "")
 
-	cFile, err := os.Open(path)
+	cFile, err := os.Open(conf.Files[0])
 	if err != nil {
 		return err
 	}
